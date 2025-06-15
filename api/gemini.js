@@ -1,12 +1,21 @@
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '20mb', // Aumenta tamaño para imágenes grandes
+      sizeLimit: '20mb',
     },
   },
 };
 
 export default async function handler(req, res) {
+  
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end(); 
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Only POST allowed' });
   }
@@ -23,14 +32,12 @@ export default async function handler(req, res) {
 
   const parts = [];
 
-  // Agregar texto
   prompts.forEach(prompt => {
     if (prompt && typeof prompt === 'string') {
       parts.push({ text: prompt });
     }
   });
 
-  // Agregar imágenes base64
   for (let i = 0; i < imageBase64List.length; i++) {
     const base64 = imageBase64List[i];
     const mimeType = mimeTypes[i] || 'image/jpeg';
@@ -45,7 +52,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // Agregar imágenes por URL
   for (let url of imageUrls) {
     if (!url) continue;
     try {
@@ -65,10 +71,9 @@ export default async function handler(req, res) {
     }
   }
 
-  // Construir payload
   const payload = {
     contents: [
-      ...history, // historial opcional
+      ...history,
       {
         role: 'user',
         parts
@@ -80,7 +85,6 @@ export default async function handler(req, res) {
     }
   };
 
-  // Enviar a Gemini
   const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyA3rQorwUMGCMm-g6Bn7ewlw9qjwTpEjpE`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
