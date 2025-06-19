@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
   const promptText = prompts?.[0]?.toLowerCase?.() || '';
 
-  const quiereImagen = /(?:hazme|haz|genera|generar|crear|crea|imagina|imaginar|dibuja|dibujo|dibujar|construye|construir|pinta|pintar|representa|visualiza|ilustra|ilustrar|diseña|diseñar|describe|una|un)?\s*(imagen|foto|escena|dibujo|paisaje|personaje|ilustración|fotografía|concepto|retrato|animal|criatura|robot|alien|gato|ciudad|fantasía|estilo|monstruo|dragón|arte|diseño|fondo|ambiente|ambiente|objeto|estructura|casa|castillo|armadura|nave|planeta|universo|galaxia|fantasma|hada|demonio|ángel|humanoide|mecha|caricatura|avatar|anime|realista|surrealista|escenario|panorama)/i.test(promptText);
+  const quiereImagen = /(?:hazme|haz|genera|generar|crear|crea|imagina|imaginar|dibuja|dibujo|dibujar|construye|construir|pinta|pintar|representa|visualiza|ilustra|ilustrar|diseña|diseñar|describe|una|un)?\s*(imagen|foto|escena|dibujo|paisaje|personaje|ilustración|fotografía|concepto|retrato|criatura|robot|alien|gato|ciudad|fantasía|estilo|monstruo|dragón|arte|diseño|fondo|ambiente|ambiente|objeto|estructura|casa|castillo|armadura|nave|planeta|universo|galaxia|fantasma|hada|demonio|ángel|humanoide|mecha|caricatura|avatar|realista|surrealista|escenario|panorama)/i.test(promptText);
 
   
   if (quiereImagen && !imageBase64List.length && !imageUrls.length) {
