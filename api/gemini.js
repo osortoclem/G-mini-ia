@@ -26,9 +26,9 @@ export default async function handler(req, res) {
 
   const promptText = prompts?.[0]?.toLowerCase?.() || '';
 
-  const quiereImagen = /(?:hazme|genera|crear|imagina|dibuja|construye|pinta).*(imagen|foto|escena|dibujo|paisaje|personaje)/.test(promptText);
+  const quiereImagen = /(?:hazme|haz|genera|generar|crear|crea|imagina|imaginar|dibuja|dibujo|dibujar|construye|construir|pinta|pintar|representa|visualiza|ilustra|ilustrar|diseña|diseñar|describe|una|un)?\s*(imagen|foto|escena|dibujo|paisaje|personaje|ilustración|fotografía|concepto|retrato|animal|criatura|robot|alien|gato|ciudad|fantasía|estilo|monstruo|dragón|arte|diseño|fondo|ambiente|ambiente|objeto|estructura|casa|castillo|armadura|nave|planeta|universo|galaxia|fantasma|hada|demonio|ángel|humanoide|mecha|caricatura|avatar|anime|realista|surrealista|escenario|panorama)/i.test(promptText);
 
-  // 🔁 Si el prompt es para generar imagen, usamos la otra API
+  
   if (quiereImagen && !imageBase64List.length && !imageUrls.length) {
     try {
       const encodedPrompt = encodeURIComponent(prompts[0]);
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // 🧠 Flujo normal de IA Gemini
+  
   const parts = [];
 
   prompts.forEach(prompt => {
