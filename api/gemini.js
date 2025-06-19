@@ -7,18 +7,12 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end(); 
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Only POST allowed' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Only POST allowed' });
 
   const {
     prompts = [],
@@ -30,6 +24,26 @@ export default async function handler(req, res) {
     topP = 1.0
   } = req.body;
 
+  const promptText = prompts?.[0]?.toLowerCase?.() || '';
+
+  const quiereImagen = /(?:hazme|genera|crear|imagina|dibuja|construye|pinta).*(imagen|foto|escena|dibujo|paisaje|personaje)/.test(promptText);
+
+  // 🔁 Si el prompt es para generar imagen, usamos la otra API
+  if (quiereImagen && !imageBase64List.length && !imageUrls.length) {
+    try {
+      const encodedPrompt = encodeURIComponent(prompts[0]);
+      const imageUrl = `https://anime-xi-wheat.vercel.app/api/ia-img?prompt=${encodedPrompt}`;
+
+      return res.status(200).json({
+        image: imageUrl,
+        from: 'image-generator'
+      });
+    } catch (error) {
+      return res.status(500).json({ error: 'Error al generar imagen', details: error.toString() });
+    }
+  }
+
+  // 🧠 Flujo normal de IA Gemini
   const parts = [];
 
   prompts.forEach(prompt => {
@@ -41,7 +55,6 @@ export default async function handler(req, res) {
   for (let i = 0; i < imageBase64List.length; i++) {
     const base64 = imageBase64List[i];
     const mimeType = mimeTypes[i] || 'image/jpeg';
-
     if (base64) {
       parts.push({
         inline_data: {
@@ -85,12 +98,16 @@ export default async function handler(req, res) {
     }
   };
 
-  const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyA3rQorwUMGCMm-g6Bn7ewlw9qjwTpEjpE`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+  try {
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyA3rQorwUMGCMm-g6Bn7ewlw9qjwTpEjpE`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-  const data = await geminiResponse.json();
-  res.status(200).json(data);
+    const data = await geminiResponse.json();
+    return res.status(200).json(data);
+  } catch (e) {
+    return res.status(500).json({ error: 'Error con Gemini API', details: e.toString() });
+  }
 }
