@@ -1,3 +1,5 @@
+import fetch from 'node-fetch';
+
 export const config = {
   api: {
     bodyParser: {
@@ -6,7 +8,7 @@ export const config = {
   },
 };
 
-// Función para detectar si un prompt es de imagen
+// Detectar prompt de imagen (puedes añadir o modificar keywords)
 function isImagePrompt(prompt) {
   const keywords = [
     "genera una imagen",
@@ -26,17 +28,13 @@ function isImagePrompt(prompt) {
 }
 
 export default async function handler(req, res) {
+  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Only POST allowed' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Only POST allowed' });
 
   const {
     prompts = [],
@@ -50,14 +48,19 @@ export default async function handler(req, res) {
 
   const promptText = prompts[0]?.trim();
 
-  // Si es prompt de imagen, redirige a la otra API
   if (promptText && isImagePrompt(promptText)) {
     try {
       const encodedPrompt = encodeURIComponent(promptText);
       const imageUrl = `https://anime-xi-wheat.vercel.app/api/ia-img?prompt=${encodedPrompt}`;
 
-      // Aquí suponemos que devuelve una imagen directamente en base64 o URL
+      // La API externa devuelve una imagen directamente (image/jpeg o png, etc)
+      // Hacemos fetch y convertimos a base64 para devolverlo embebido
       const imageRes = await fetch(imageUrl);
+
+      if (!imageRes.ok) {
+        return res.status(500).json({ error: 'Error al obtener imagen de la API externa', status: imageRes.status });
+      }
+
       const contentType = imageRes.headers.get('content-type') || 'image/jpeg';
       const buffer = await imageRes.arrayBuffer();
       const base64 = Buffer.from(buffer).toString('base64');
@@ -77,7 +80,8 @@ export default async function handler(req, res) {
     }
   }
 
-  // Si no es prompt de imagen, procesa normalmente con Gemini
+  // Si no es prompt de imagen, enviar la petición a Gemini
+
   const parts = [];
 
   prompts.forEach(prompt => {
