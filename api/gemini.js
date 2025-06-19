@@ -49,12 +49,11 @@ export default async function handler(req, res) {
   const promptText = prompts[0]?.trim();
 
   if (promptText && isImagePrompt(promptText)) {
+    // Prompt para generar imagen
     try {
       const encodedPrompt = encodeURIComponent(promptText);
       const imageUrl = `https://anime-xi-wheat.vercel.app/api/ia-img?prompt=${encodedPrompt}`;
 
-      // La API externa devuelve una imagen directamente (image/jpeg o png, etc)
-      // Hacemos fetch y convertimos a base64 para devolverlo embebido
       const imageRes = await fetch(imageUrl);
 
       if (!imageRes.ok) {
@@ -80,7 +79,12 @@ export default async function handler(req, res) {
     }
   }
 
-  // Si no es prompt de imagen, enviar la petición a Gemini
+  // Si no es prompt de imagen, procesar texto con Gemini
+
+  // Validar que hay prompts para procesar
+  if (!Array.isArray(prompts) || prompts.length === 0) {
+    return res.status(400).json({ error: 'No se recibieron prompts para procesar.' });
+  }
 
   const parts = [];
 
@@ -90,6 +94,11 @@ export default async function handler(req, res) {
     }
   });
 
+  if (parts.length === 0) {
+    return res.status(400).json({ error: 'No hay contenido válido en prompts.' });
+  }
+
+  // Agregar imágenes base64 si hay
   for (let i = 0; i < imageBase64List.length; i++) {
     const base64 = imageBase64List[i];
     const mimeType = mimeTypes[i] || 'image/jpeg';
@@ -104,10 +113,14 @@ export default async function handler(req, res) {
     }
   }
 
+  // Agregar imágenes desde URLs si hay
   for (let url of imageUrls) {
     if (!url) continue;
     try {
       const imageRes = await fetch(url);
+      if (!imageRes.ok) {
+        return res.status(400).json({ error: `Error al cargar imagen desde URL: ${url}`, status: imageRes.status });
+      }
       const contentType = imageRes.headers.get('content-type') || 'image/jpeg';
       const buffer = await imageRes.arrayBuffer();
       const base64Data = Buffer.from(buffer).toString('base64');
@@ -144,8 +157,14 @@ export default async function handler(req, res) {
       body: JSON.stringify(payload)
     });
 
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text();
+      return res.status(500).json({ error: 'Error Gemini API', status: geminiResponse.status, body: errorText });
+    }
+
     const data = await geminiResponse.json();
     return res.status(200).json(data);
+
   } catch (e) {
     return res.status(500).json({ error: 'Error al consultar Gemini', details: e.message });
   }
