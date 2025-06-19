@@ -6,14 +6,32 @@ export const config = {
   },
 };
 
+// Función para detectar si un prompt es de imagen
+function isImagePrompt(prompt) {
+  const keywords = [
+    "genera una imagen",
+    "imagina",
+    "haz una imagen",
+    "crear una imagen",
+    "quiero una imagen",
+    "muéstrame una imagen",
+    "imagen de",
+    "dibuja",
+    "pinta",
+    "una imagen de",
+    "generar imagen"
+  ];
+  const lowerPrompt = prompt.toLowerCase();
+  return keywords.some(keyword => lowerPrompt.includes(keyword));
+}
+
 export default async function handler(req, res) {
-  
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end(); 
+    return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
@@ -30,6 +48,36 @@ export default async function handler(req, res) {
     topP = 1.0
   } = req.body;
 
+  const promptText = prompts[0]?.trim();
+
+  // Si es prompt de imagen, redirige a la otra API
+  if (promptText && isImagePrompt(promptText)) {
+    try {
+      const encodedPrompt = encodeURIComponent(promptText);
+      const imageUrl = `https://anime-xi-wheat.vercel.app/api/ia-img?prompt=${encodedPrompt}`;
+
+      // Aquí suponemos que devuelve una imagen directamente en base64 o URL
+      const imageRes = await fetch(imageUrl);
+      const contentType = imageRes.headers.get('content-type') || 'image/jpeg';
+      const buffer = await imageRes.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString('base64');
+
+      return res.status(200).json({
+        from: 'external-image-api',
+        prompt: promptText,
+        mime_type: contentType,
+        image_base64: `data:${contentType};base64,${base64}`
+      });
+
+    } catch (e) {
+      return res.status(500).json({
+        error: 'Error al generar imagen desde API externa',
+        details: e.message
+      });
+    }
+  }
+
+  // Si no es prompt de imagen, procesa normalmente con Gemini
   const parts = [];
 
   prompts.forEach(prompt => {
@@ -85,12 +133,16 @@ export default async function handler(req, res) {
     }
   };
 
-  const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyA3rQorwUMGCMm-g6Bn7ewlw9qjwTpEjpE`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+  try {
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyA3rQorwUMGCMm-g6Bn7ewlw9qjwTpEjpE`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-  const data = await geminiResponse.json();
-  res.status(200).json(data);
+    const data = await geminiResponse.json();
+    return res.status(200).json(data);
+  } catch (e) {
+    return res.status(500).json({ error: 'Error al consultar Gemini', details: e.message });
+  }
 }
