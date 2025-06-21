@@ -40,13 +40,22 @@ export default function handler(req, res) {
 
 function processNumber(numero) {
   try {
-    const phoneNumber = parsePhoneNumberFromString(numero);
+    // Quitar espacios
+    const cleanNumber = numero.trim();
+
+    // Asegurarnos que empiece con '+' para formato internacional
+    const formattedNumber = cleanNumber.startsWith('+') ? cleanNumber : `+${cleanNumber}`;
+
+    const phoneNumber = parsePhoneNumberFromString(formattedNumber);
+
     if (!phoneNumber || !phoneNumber.country) {
       return { numero, error: 'Número inválido o país no reconocido' };
     }
-    const countryCode = phoneNumber.country; // ej. "US"
+
+    const countryCode = phoneNumber.country; // ej. "HN"
     const emoji = countryCodeToEmoji(countryCode);
     const countryName = countryNames[countryCode] || 'Desconocido';
+
     return {
       numero,
       pais: countryName,
