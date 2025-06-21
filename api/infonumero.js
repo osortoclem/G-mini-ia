@@ -10,20 +10,31 @@ function getFlagEmoji(countryCode) {
 }
 
 module.exports = async (req, res) => {
-  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Método no permitido" });
+
+  let body;
+  try {
+    body = await new Promise((resolve, reject) => {
+      let data = "";
+      req.on("data", chunk => { data += chunk; });
+      req.on("end", () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+  } catch (e) {
+    return res.status(400).json({ error: "JSON inválido en el body" });
   }
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Método no permitido" });
-  }
-
-  const { numeros } = req.body;
+  const { numeros } = body;
 
   if (!Array.isArray(numeros)) {
     return res.status(400).json({ error: "Envía una lista en el campo 'numeros'" });
@@ -39,7 +50,7 @@ module.exports = async (req, res) => {
         prefijo: `+${parsed.countryCallingCode}`,
         bandera: getFlagEmoji(parsed.country),
       };
-    } catch (error) {
+    } catch {
       return {
         numero,
         error: "Número inválido o no reconocido",
@@ -47,5 +58,5 @@ module.exports = async (req, res) => {
     }
   });
 
-  res.json(resultados);
+  res.status(200).json(resultados);
 };
