@@ -10,53 +10,26 @@ function getFlagEmoji(countryCode) {
 }
 
 module.exports = async (req, res) => {
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Método no permitido" });
+  const { numero } = req.query;
 
-  let body;
+  if (!numero) {
+    return res.status(400).json({ error: "Parámetro 'numero' requerido" });
+  }
+
   try {
-    body = await new Promise((resolve, reject) => {
-      let data = "";
-      req.on("data", chunk => { data += chunk; });
-      req.on("end", () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (err) {
-          reject(err);
-        }
-      });
+    const parsed = parsePhoneNumber(numero);
+
+    res.json({
+      numero: parsed.number,
+      pais: parsed.country || "Desconocido",
+      nombrePais: parsed.country || "Desconocido",
+      prefijo: `+${parsed.countryCallingCode}`,
+      bandera: getFlagEmoji(parsed.country),
     });
-  } catch (e) {
-    return res.status(400).json({ error: "JSON inválido en el body" });
+  } catch (err) {
+    res.status(400).json({ error: "Número inválido o no reconocido" });
   }
-
-  const { numeros } = body;
-
-  if (!Array.isArray(numeros)) {
-    return res.status(400).json({ error: "Envía una lista en el campo 'numeros'" });
-  }
-
-  const resultados = numeros.map(numero => {
-    try {
-      const parsed = parsePhoneNumber(numero);
-      return {
-        numero: parsed.number,
-        pais: parsed.country || "Desconocido",
-        nombrePais: parsed.country || "Desconocido",
-        prefijo: `+${parsed.countryCallingCode}`,
-        bandera: getFlagEmoji(parsed.country),
-      };
-    } catch {
-      return {
-        numero,
-        error: "Número inválido o no reconocido",
-      };
-    }
-  });
-
-  res.status(200).json(resultados);
 };
