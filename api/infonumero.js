@@ -1,4 +1,5 @@
-import { parsePhoneNumber } from "libphonenumber-js";
+// ✅ Usa require en lugar de import
+const { parsePhoneNumber } = require("libphonenumber-js");
 
 function getFlagEmoji(countryCode) {
   if (!countryCode) return null;
@@ -9,21 +10,14 @@ function getFlagEmoji(countryCode) {
   return String.fromCodePoint(...codePoints);
 }
 
-export default async function handler(req, res) {
-  // ✅ Habilitar CORS para todos los dominios
+module.exports = async (req, res) => {
+  // ✅ CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // ✅ Manejar preflight request (OPTIONS)
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  // ✅ Solo aceptar POST
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Método no permitido" });
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Método no permitido" });
 
   const { numeros } = req.body;
 
@@ -50,4 +44,4 @@ export default async function handler(req, res) {
   });
 
   res.json(resultados);
-}
+};
