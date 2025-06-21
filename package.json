@@ -1,4 +1,7 @@
 {
   "name": "gemini-api-vercel",
   "type": "module"
+  "dependencies": {
+    "libphonenumber-js": "^1.10.25"
+  }
 }
