@@ -1,4 +1,3 @@
-// ✅ Usa require en lugar de import
 const { parsePhoneNumber } = require("libphonenumber-js");
 
 function getFlagEmoji(countryCode) {
@@ -11,13 +10,18 @@ function getFlagEmoji(countryCode) {
 }
 
 module.exports = async (req, res) => {
-  // ✅ CORS
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Método no permitido" });
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Método no permitido" });
+  }
 
   const { numeros } = req.body;
 
@@ -35,7 +39,7 @@ module.exports = async (req, res) => {
         prefijo: `+${parsed.countryCallingCode}`,
         bandera: getFlagEmoji(parsed.country),
       };
-    } catch {
+    } catch (error) {
       return {
         numero,
         error: "Número inválido o no reconocido",
