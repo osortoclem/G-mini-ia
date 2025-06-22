@@ -12,27 +12,34 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(redditUrl);
+
+    if (!response.ok) {
+      console.error(`Error en la petición a Reddit: ${response.status} ${response.statusText}`);
+      return res.status(502).json({ error: 'Reddit no respondió correctamente' });
+    }
+
     const json = await response.json();
 
-    const posts = json.data.children
-      .map(p => p.data)
-      .filter(p => isMedia(p.url))
-      .map(p => ({
+    const posts = json.data?.children
+      ?.map(p => p.data)
+      ?.filter(p => isMedia(p.url))
+      ?.map(p => ({
         title: p.title,
         url: p.url,
         type: /\.(mp4|webm)$/i.test(p.url) ? 'video' : 'image'
       }));
 
-    const meme = posts[Math.floor(Math.random() * posts.length)];
+    const meme = posts?.[Math.floor(Math.random() * posts.length)];
 
     if (!meme) {
+      console.error('No se encontró ningún meme válido.');
       return res.status(404).json({ error: 'No memes found' });
     }
 
     res.status(200).json(meme);
 
   } catch (err) {
-    console.error('Error al obtener memes:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error inesperado en el handler:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
