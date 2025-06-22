@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       console.error(`Error en Reddit: ${response.status} - ${response.statusText}`);
-      return res.status(502).json({ error: 'Reddit no respondió correctamente' });
+      return res.status(502).json({ error: 'Reddit no respondió correctamente 😾' });
     }
 
     const json = await response.json();
