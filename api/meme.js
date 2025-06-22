@@ -1,48 +1,28 @@
 import fetch from 'node-fetch';
-
-const subreddits = ['memes', 'dankmemes', 'wholesomememes'];
-
-function isMedia(url) {
-  return /\.(mp4|webm|jpg|jpeg|png|gif)$/i.test(url);
-}
+import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
-  const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
-  const redditUrl = `https://www.reddit.com/r/${subreddit}/hot.json?limit=50`;
-
   try {
-    const response = await fetch(redditUrl, {
-      headers: {
-        'User-Agent': 'MemeFinder/1.0 by yourusername'
-      }
+    const response = await fetch('https://imgur.com/r/memes/hot');
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    const memes = [];
+
+    $('a.image-list-link').each((i, el) => {
+      const path = $(el).attr('href');
+      if (path) memes.push(`https://i.imgur.com${path}.jpg`);
     });
 
-    if (!response.ok) {
-      console.error(`Error en Reddit: ${response.status} - ${response.statusText}`);
-      return res.status(502).json({ error: 'Reddit no respondió correctamente 😾' });
-    }
+    const url = memes[Math.floor(Math.random() * memes.length)];
 
-    const json = await response.json();
-
-    const posts = json.data?.children
-      ?.map(p => p.data)
-      ?.filter(p => isMedia(p.url))
-      ?.map(p => ({
-        title: p.title,
-        url: p.url,
-        type: /\.(mp4|webm)$/i.test(p.url) ? 'video' : 'image'
-      }));
-
-    const meme = posts?.[Math.floor(Math.random() * posts.length)];
-
-    if (!meme) {
-      return res.status(404).json({ error: 'No memes found' });
-    }
-
-    res.status(200).json(meme);
-
-  } catch (err) {
-    console.error('Error inesperado:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(200).json({
+      title: 'Random meme from Imgur',
+      url,
+      type: 'image'
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'No se pudo obtener memes desde Imgur' });
   }
 }
