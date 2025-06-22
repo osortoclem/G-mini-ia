@@ -11,10 +11,14 @@ export default async function handler(req, res) {
   const redditUrl = `https://www.reddit.com/r/${subreddit}/hot.json?limit=50`;
 
   try {
-    const response = await fetch(redditUrl);
+    const response = await fetch(redditUrl, {
+      headers: {
+        'User-Agent': 'MemeFinder/1.0 by yourusername'
+      }
+    });
 
     if (!response.ok) {
-      console.error(`Error en la petición a Reddit: ${response.status} ${response.statusText}`);
+      console.error(`Error en Reddit: ${response.status} - ${response.statusText}`);
       return res.status(502).json({ error: 'Reddit no respondió correctamente' });
     }
 
@@ -32,14 +36,13 @@ export default async function handler(req, res) {
     const meme = posts?.[Math.floor(Math.random() * posts.length)];
 
     if (!meme) {
-      console.error('No se encontró ningún meme válido.');
       return res.status(404).json({ error: 'No memes found' });
     }
 
     res.status(200).json(meme);
 
   } catch (err) {
-    console.error('Error inesperado en el handler:', err);
+    console.error('Error inesperado:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
