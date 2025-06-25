@@ -1,6 +1,7 @@
-const cheerio = require("cheerio");
+import cheerio from 'cheerio';
+import fetch from 'node-fetch';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   const { url } = req.query;
 
   if (!url || !url.includes("tiktok.com")) {
@@ -10,8 +11,8 @@ module.exports = async (req, res) => {
   try {
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0",
-      },
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+      }
     });
 
     const html = await response.text();
@@ -34,4 +35,4 @@ module.exports = async (req, res) => {
   } catch (e) {
     return res.status(500).json({ error: "Error al procesar la URL", detalle: e.message });
   }
-};
+}
