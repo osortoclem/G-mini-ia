@@ -1,6 +1,6 @@
-import cheerio from "cheerio";
+const cheerio = require("cheerio");
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   const { url } = req.query;
 
   if (!url || !url.includes("tiktok.com")) {
@@ -17,21 +17,21 @@ export default async function handler(req, res) {
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    const scripts = $('script[type="application/ld+json"]');
-    if (!scripts.length) {
+    const scriptTag = $('script[type="application/ld+json"]').first();
+    if (!scriptTag.length) {
       return res.status(500).json({ error: "No se encontró metadata del video" });
     }
 
-    const metadata = JSON.parse(scripts.first().html());
+    const metadata = JSON.parse(scriptTag.html());
     const videoUrl = metadata.contentUrl;
 
     return res.status(200).json({
       title: metadata.description,
       author: metadata.author.name,
       video_url: videoUrl,
-      thumbnail: metadata.thumbnailUrl,
+      thumbnail: metadata.thumbnailUrl
     });
   } catch (e) {
     return res.status(500).json({ error: "Error al procesar la URL", detalle: e.message });
   }
-}
+};
