@@ -1,5 +1,7 @@
 import chromium from 'chrome-aws-lambda';
 import playwright from 'playwright-core';
+import path from 'path';
+import fs from 'fs';
 
 export default async function handler(req, res) {
   const { q } = req.query;
@@ -8,16 +10,24 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
+    const executablePath =
+      (await chromium.executablePath) ||
+      (process.platform === 'win32'
+        ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+        : process.platform === 'darwin'
+        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        : '/usr/bin/google-chrome');
+
     browser = await playwright.chromium.launch({
       args: chromium.args,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless
+      executablePath,
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();
     await page.goto(`https://www.tiktok.com/search?q=${encodeURIComponent(q)}`, {
       waitUntil: 'domcontentloaded',
-      timeout: 30000
+      timeout: 30000,
     });
 
     await page.waitForSelector('div[data-e2e="search-video-item"]', { timeout: 10000 });
@@ -30,7 +40,7 @@ export default async function handler(req, res) {
         return {
           title,
           url: a?.href || '',
-          thumbnail
+          thumbnail,
         };
       })
     );
