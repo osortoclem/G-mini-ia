@@ -6,7 +6,8 @@
     "libphonenumber-js": "^1.10.25",
     "cheerio": "^1.0.0-rc.12",
     "ruhend-scraper": "^7.0.4",
-    "playwright": "^1.44.0",
+    "chrome-aws-lambda": "^10.1.0",
+    "playwright-core": "^1.44.0",
     "hispamemes": "^1.0.7",
     "node-fetch": "^3.3.2"
   }
