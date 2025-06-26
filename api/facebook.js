@@ -1,24 +1,22 @@
 // api/facebook.js
-import { igdl } from 'ruhend-scraper';
-
 export default async function handler(req, res) {
   const url = req.query.url;
-
   if (!url || !url.includes('facebook.com')) {
-    return res.status(400).json({ error: 'Debes proporcionar una URL válida de Facebook.' });
+    return res.status(400).json({ error: 'URL inválida de Facebook.' });
   }
 
   try {
-    const response = await igdl(url);
+    const api = `https://vihangayt.me/download/facebook?url=${encodeURIComponent(url)}`;
+    const response = await fetch(api);
+    const json = await response.json();
 
-    if (!response || !response.data || response.data.length === 0) {
-      return res.status(404).json({ error: 'No se encontraron resultados para el enlace proporcionado.' });
+    if (!json || !json.data?.url) {
+      return res.status(404).json({ error: 'No se encontró video válido.' });
     }
 
-    // Simplemente devolver toda la respuesta que da la librería
-    return res.status(200).json(response);
-  } catch (error) {
-    console.error('Error al procesar el video de Facebook:', error);
-    return res.status(500).json({ error: 'Ocurrió un error al procesar el video.' });
+    return res.status(200).json(json.data);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: 'Error al obtener el video.' });
   }
 }
