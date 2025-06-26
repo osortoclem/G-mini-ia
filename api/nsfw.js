@@ -41,6 +41,6 @@ export default async function handler(req, res) {
     });
   } catch (e) {
     console.error('Reddit error:', e.message);
-    res.status(500).json({ error: 'Error al obtener datos de Reddit' });
+    res.status(500).json({ error: 'Error al obtener datos de Reddit 🙀' });
   }
 }
