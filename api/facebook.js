@@ -1,18 +1,24 @@
-import { chromium } from 'playwright';
+import chromium from 'chrome-aws-lambda';
+import playwright from 'playwright-core';
 
 export default async function handler(req, res) {
   const { q } = req.query;
+  if (!q) return res.status(400).json({ error: 'Falta el parámetro ?q=' });
 
-  if (!q) {
-    return res.status(400).json({ error: 'Falta la palabra clave de búsqueda (?q=)' });
-  }
+  let browser = null;
 
   try {
-    const browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    browser = await playwright.chromium.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless
+    });
 
-    const searchUrl = `https://www.tiktok.com/search?q=${encodeURIComponent(q)}`;
-    await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
+    const page = await browser.newPage();
+    await page.goto(`https://www.tiktok.com/search?q=${encodeURIComponent(q)}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000
+    });
 
     await page.waitForSelector('div[data-e2e="search-video-item"]', { timeout: 10000 });
 
@@ -30,9 +36,9 @@ export default async function handler(req, res) {
     );
 
     await browser.close();
-
     return res.status(200).json({ query: q, results });
   } catch (err) {
+    if (browser) await browser.close();
     return res.status(500).json({ error: 'Error al buscar en TikTok', detalle: err.message });
   }
 }
