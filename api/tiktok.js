@@ -1,6 +1,3 @@
-import cheerio from 'cheerio';
-import fetch from 'node-fetch';
-
 export default async function handler(req, res) {
   const { url } = req.query;
 
@@ -9,16 +6,24 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log("Obteniendo HTML desde:", url);
+
     const response = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
       }
     });
 
+    console.log("Código de respuesta:", response.status);
     const html = await response.text();
-    const $ = cheerio.load(html);
 
+    if (!html.includes("application/ld+json")) {
+      return res.status(500).json({ error: "No se encontró contenido esperado en la página de TikTok" });
+    }
+
+    const $ = cheerio.load(html);
     const scriptTag = $('script[type="application/ld+json"]').first();
+
     if (!scriptTag.length) {
       return res.status(500).json({ error: "No se encontró metadata del video" });
     }
@@ -33,6 +38,7 @@ export default async function handler(req, res) {
       thumbnail: metadata.thumbnailUrl
     });
   } catch (e) {
+    console.error("Error capturado:", e);
     return res.status(500).json({ error: "Error al procesar la URL", detalle: e.message });
   }
 }
