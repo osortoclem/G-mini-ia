@@ -17,15 +17,17 @@ export default async function handler(req, res) {
     })
 
     const html = await response.text()
-    const $ = cheerio.load(html)
 
-    // Facebook a veces incluye el video como <meta property="og:video" content="..." />
+    // REGISTRO EN CONSOLA PARA VER QUÉ LLEGÓ
+    console.log(html.slice(0, 300)) // Solo los primeros 300 caracteres
+
+    const $ = cheerio.load(html)
     const videoUrl = $('meta[property="og:video"]').attr('content')
     const thumbnail = $('meta[property="og:image"]').attr('content')
     const title = $('meta[property="og:title"]').attr('content')
 
     if (!videoUrl) {
-      return res.status(500).json({ error: 'No se pudo obtener el video. Asegúrate de que el enlace sea público.' })
+      return res.status(500).json({ error: 'No se pudo obtener el video. Facebook devolvió HTML inesperado.' })
     }
 
     return res.status(200).json({
@@ -34,6 +36,7 @@ export default async function handler(req, res) {
       thumbnail,
     })
   } catch (err) {
+    console.error('Error:', err.message)
     return res.status(500).json({ error: 'Error al procesar la URL', detalle: err.message })
   }
 }
