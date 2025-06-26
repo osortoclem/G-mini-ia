@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   try {
     const fetch = (await import('node-fetch')).default;
 
-    const response = await fetch('https://www.reddit.com/r/nsfw.json?limit=2&raw_json=1', {
+    const response = await fetch('https://www.reddit.com/r/nsfw.json', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; DeylinBot/1.0)'
       }
@@ -16,6 +16,6 @@ export default async function handler(req, res) {
     res.status(200).json(data);
   } catch (e) {
     console.error('Reddit proxy error:', e.message);
-    res.status(500).json({ error: 'No se pudo obtener contenido de Reddit' });
+    res.status(500).json({ error: 'No se pudo obtener contenido de Reddit 🥱' });
   }
 }
