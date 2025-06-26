@@ -2,27 +2,39 @@
 
 export default async function handler(req, res) {
   try {
-    const response = await fetch('https://www.reddit.com/r/nsfw.json?limit=50');
-    const data = await response.json();
+    const response = await fetch('https://www.reddit.com/r/nsfw.json?limit=50', {
+      headers: { 'User-Agent': 'DeylinBot/1.0' }
+    });
 
-    const posts = data.data.children
-      .filter(post => post.data?.url && !post.data.over_18 === false)
-      .map(post => ({
-        title: post.data.title,
-        url: post.data.url,
-        author: post.data.author,
-        ups: post.data.ups
-      }));
+    const json = await response.json();
+    const allPosts = json?.data?.children || [];
 
-    const selected = posts.sort(() => 0.5 - Math.random()).slice(0, 2);
+    const filtered = allPosts
+      .map(post => post.data)
+      .filter(post =>
+        post.url &&
+        (post.url.endsWith('.jpg') || post.url.endsWith('.png') || post.url.endsWith('.gif') || post.url.includes('redgifs.com')) &&
+        !post.over_18 === false // solo adultos
+      );
 
-    res.setHeader('Content-Type', 'application/json');
+    const random = filtered.sort(() => Math.random() - 0.5).slice(0, 2);
+
+    const resultados = random.map(post => ({
+      title: post.title,
+      url: post.url,
+      thumbnail: post.thumbnail,
+      ups: post.ups,
+      author: post.author,
+      postLink: `https://www.reddit.com${post.permalink}`
+    }));
+
     res.status(200).json({
       autor: 'Deylin',
-      cantidad: selected.length,
-      resultados: selected
+      total: resultados.length,
+      resultados
     });
-  } catch (error) {
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ error: 'Error al obtener datos de Reddit' });
   }
 }
