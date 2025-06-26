@@ -1,17 +1,20 @@
-import chromium from 'chrome-aws-lambda';
 import puppeteer from 'puppeteer-core';
+import chromium from 'chrome-aws-lambda';
 
 export default async function handler(req, res) {
   const { q } = req.query;
   if (!q) return res.status(400).json({ error: 'Falta el parámetro ?q=' });
 
-  let browser = null;
+  const isDev = !process.env.AWS_REGION; // Detectar entorno local o Vercel Lambda
 
+  let browser;
   try {
     browser = await puppeteer.launch({
       args: chromium.args,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless
+      executablePath: isDev
+        ? '/usr/bin/google-chrome' // <- Cambia esto si usas otra ruta local
+        : await chromium.executablePath,
+      headless: true,
     });
 
     const page = await browser.newPage();
@@ -39,6 +42,9 @@ export default async function handler(req, res) {
     return res.status(200).json({ query: q, results });
   } catch (err) {
     if (browser) await browser.close();
-    return res.status(500).json({ error: 'Error al buscar en TikTok', detalle: err.message });
+    return res.status(500).json({
+      error: 'Error al buscar en TikTok',
+      detalle: err.message,
+    });
   }
 }
