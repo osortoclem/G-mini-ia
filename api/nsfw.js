@@ -2,37 +2,25 @@
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
+  const endpoints = [
+    'boobs', 'anal', 'classic', 'pussy', 'tits', 'les', 'solo', 'kuni'
+  ];
+
+  const type = endpoints[Math.floor(Math.random() * endpoints.length)];
+  const url = `https://nekos.life/api/v2/img/${type}`;
+
   try {
-    const redditURL = 'https://www.reddit.com/r/nsfw.json?limit=50';
-    const response = await fetch(redditURL, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
-      }
-    });
-
-    if (!response.ok) {
-      return res.status(500).json({ error: 'Error al acceder a Reddit', status: response.status });
-    }
-
+    const response = await fetch(url);
     const json = await response.json();
-    const posts = json?.data?.children?.filter(p => p?.data?.url);
-
-    if (!posts || posts.length === 0) {
-      return res.status(404).json({ error: 'No se encontraron publicaciones' });
-    }
-
-    const random = posts[Math.floor(Math.random() * posts.length)];
-    const { title, author, url, thumbnail, permalink, over_18 } = random.data;
 
     res.status(200).json({
-      title,
-      author,
-      url,
-      thumbnail,
-      over_18,
-      reddit_url: `https://www.reddit.com${permalink}`
+      type,
+      url: json.url
     });
-  } catch (e) {
-    res.status(500).json({ error: 'Error interno del servidor', detalle: e.message });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error al obtener imagen NSFW',
+      detalle: error.message
+    });
   }
 }
