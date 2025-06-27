@@ -2,20 +2,17 @@
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-  const endpoints = [
-    'boobs', 'anal', 'classic', 'pussy', 'tits', 'les', 'solo', 'kuni'
-  ];
-
-  const type = endpoints[Math.floor(Math.random() * endpoints.length)];
-  const url = `https://nekos.life/api/v2/img/${type}`;
+  const categories = ['waifu', 'neko', 'trap', 'blowjob'];
+  const type = categories[Math.floor(Math.random() * categories.length)];
+  const url = `https://api.waifu.pics/nsfw/${type}`;
 
   try {
     const response = await fetch(url);
-    const json = await response.json();
+    const data = await response.json();
 
     res.status(200).json({
       type,
-      url: json.url
+      url: data.url
     });
   } catch (error) {
     res.status(500).json({
