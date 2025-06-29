@@ -1,5 +1,4 @@
 import fs from 'fs'
-import path from 'path'
 import { IncomingForm } from 'formidable'
 import FormData from 'form-data'
 import fetch from 'node-fetch'
@@ -11,36 +10,42 @@ export const config = {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send('Método no permitido')
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Método no permitido' })
+  }
 
   const form = new IncomingForm({ uploadDir: '/tmp', keepExtensions: true })
 
   form.parse(req, async (err, fields, files) => {
-    if (err || !files.audio) return res.status(400).json({ error: 'Audio no recibido' })
-
     try {
-      const filePath = files.audio.filepath
-      const audioForm = new FormData()
-      audioForm.append('audio', fs.createReadStream(filePath))
+      if (err) throw new Error('Error al analizar el formulario')
+      if (!files.audio) return res.status(400).json({ error: 'Archivo de audio no recibido' })
 
+      const filePath = files.audio.filepath
+      const formData = new FormData()
+      formData.append('audio', fs.createReadStream(filePath))
+
+      console.log('⏳ Enviando audio a Whisper...')
       const whisperRes = await fetch('https://whisper.lablab.ai/asr', {
         method: 'POST',
-        body: audioForm,
-        headers: audioForm.getHeaders()
+        body: formData,
+        headers: formData.getHeaders()
       })
 
       const result = await whisperRes.json()
+      fs.unlinkSync(filePath)
+
+      console.log('✅ Respuesta de Whisper:', result)
 
       if (result && result.text) {
-        res.json({ text: result.text })
+        return res.status(200).json({ text: result.text })
       } else {
-        res.status(500).json({ error: 'Error al transcribir' })
+        return res.status(500).json({ error: 'No se pudo transcribir el audio' })
       }
 
-      fs.unlinkSync(filePath)
     } catch (e) {
-      console.error(e)
-      res.status(500).json({ error: 'Error interno' })
+      console.error('❌ Error en transcripción:', e)
+      return res.status(500).json({ error: 'Error interno al transcribir el audio' })
     }
   })
 }
