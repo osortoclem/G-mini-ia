@@ -6,7 +6,7 @@ import fetch from 'node-fetch'
 export const config = {
   api: {
     bodyParser: false,
-  }
+  },
 }
 
 export default async function handler(req, res) {
@@ -17,35 +17,40 @@ export default async function handler(req, res) {
   const form = new IncomingForm({ uploadDir: '/tmp', keepExtensions: true })
 
   form.parse(req, async (err, fields, files) => {
-    try {
-      if (err) throw new Error('Error al analizar el formulario')
-      if (!files.audio) return res.status(400).json({ error: 'Archivo de audio no recibido' })
+    if (err) {
+      console.error('❌ Error al analizar formulario:', err)
+      return res.status(400).json({ error: 'Error al procesar el formulario' })
+    }
 
-      const filePath = files.audio.filepath
+    if (!files.audio || !files.audio.filepath) {
+      return res.status(400).json({ error: 'Archivo de audio no recibido' })
+    }
+
+    const filePath = files.audio.filepath
+
+    try {
       const formData = new FormData()
       formData.append('audio', fs.createReadStream(filePath))
 
-      console.log('⏳ Enviando audio a Whisper...')
       const whisperRes = await fetch('https://whisper.lablab.ai/asr', {
         method: 'POST',
         body: formData,
-        headers: formData.getHeaders()
+        headers: formData.getHeaders(),
       })
 
       const result = await whisperRes.json()
-      fs.unlinkSync(filePath)
+      console.log('📥 Whisper respondió:', result)
 
-      console.log('✅ Respuesta de Whisper:', result)
+      fs.unlinkSync(filePath)
 
       if (result && result.text) {
         return res.status(200).json({ text: result.text })
       } else {
-        return res.status(500).json({ error: 'No se pudo transcribir el audio' })
+        return res.status(500).json({ error: 'No se pudo transcribir el audio.' })
       }
-
     } catch (e) {
-      console.error('❌ Error en transcripción:', e)
-      return res.status(500).json({ error: 'Error interno al transcribir el audio' })
+      console.error('❌ Error interno:', e)
+      return res.status(500).json({ error: 'Error interno al transcribir el audio.' })
     }
   })
 }
