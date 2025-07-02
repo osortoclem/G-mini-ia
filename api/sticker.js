@@ -5,17 +5,24 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Falta el parámetro ?q=tu_busqueda" });
   }
 
-  const TENOR_API_KEY = "LIVDSRZULELA"; // clave pública de prueba de Tenor
+  const TENOR_API_KEY = "LIVDSRZULELA"; // clave pública de prueba
 
   try {
     const response = await fetch(
-      `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(q)}&key=${TENOR_API_KEY}&limit=10&media_filter=gif,tinygif,mediumgif,mp4`
+      `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(q)}&key=${TENOR_API_KEY}&limit=10&media_filter=gif,tinygif,mp4`
     );
 
     const data = await response.json();
 
+    if (!data.results || !Array.isArray(data.results)) {
+      return res.status(500).json({
+        error: "Respuesta inesperada de Tenor",
+        response: data
+      });
+    }
+
     const stickers = data.results.map((item) => {
-      const media = item.media_formats;
+      const media = item.media_formats || {};
 
       return {
         id: item.id,
