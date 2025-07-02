@@ -5,28 +5,28 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Falta el parámetro ?q=tu_busqueda" });
   }
 
-  const TENOR_API_KEY = "LIVDSRZULELA"; // clave pública de prueba
+  const TENOR_OLD_API_KEY = "LIVDSRZULELA"; // Esta sí sirve en el endpoint anterior
 
   try {
     const response = await fetch(
-      `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(q)}&key=${TENOR_API_KEY}&limit=10&media_filter=gif,tinygif,mp4`
+      `https://g.tenor.com/v1/search?q=${encodeURIComponent(q)}&key=${TENOR_OLD_API_KEY}&limit=10`
     );
 
     const data = await response.json();
 
     if (!data.results || !Array.isArray(data.results)) {
       return res.status(500).json({
-        error: "Respuesta inesperada de Tenor",
+        error: "Respuesta inesperada de Tenor (v1)",
         response: data
       });
     }
 
     const stickers = data.results.map((item) => {
-      const media = item.media_formats || {};
+      const media = item.media?.[0] || {};
 
       return {
         id: item.id,
-        title: item.content_description || "Sticker",
+        title: item.title || "Sticker",
         type: media.mp4 ? "video" : media.gif ? "gif" : "image",
         url: media.mp4?.url || media.gif?.url || media.tinygif?.url,
         source: "Tenor"
