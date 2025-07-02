@@ -6,8 +6,15 @@ export default async function handler(req, res) {
   if (!q) return res.status(400).json({ status: false, error: '❌ Falta el parámetro ?q=' })
 
   try {
+    console.log(`🔎 Buscando sticker.ly con: ${q}`)
     const searchURL = `https://sticker.ly/s/${encodeURIComponent(q)}`
     const response = await fetch(searchURL)
+
+    if (!response.ok) {
+      console.error(`❌ Falló la solicitud a sticker.ly: ${response.status}`)
+      return res.status(500).json({ status: false, error: '❌ Falló la solicitud a sticker.ly' })
+    }
+
     const html = await response.text()
     const $ = cheerio.load(html)
 
@@ -29,6 +36,8 @@ export default async function handler(req, res) {
       }
     })
 
+    console.log(`✅ Resultados encontrados: ${result.length}`)
+
     if (result.length === 0) {
       return res.status(404).json({ status: false, error: '❌ No se encontraron resultados.' })
     }
@@ -48,7 +57,7 @@ export default async function handler(req, res) {
       res: data
     })
   } catch (e) {
-    console.error('❌ Error:', e)
+    console.error('❌ Error en handler:', e)
     return res.status(500).json({
       status: false,
       error: '❌ Error interno al buscar en sticker.ly',
