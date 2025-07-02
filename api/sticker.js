@@ -1,20 +1,26 @@
+const fetchStickersOrGifs = async (endpoint) => {
+  const res = await fetch(endpoint);
+  const json = await res.json();
+  return json?.data || [];
+};
+
 export default async function handler(req, res) {
   const { q } = req.query;
   if (!q) return res.status(400).json({ error: "Falta el parámetro ?q=busqueda" });
 
-  const API_KEY = "dc6zaTOxFJmzC"; // clave pública de GIPHY
+  const API_KEY = "dc6zaTOxFJmzC";
+  const base = `https://api.giphy.com/v1`;
+  const params = `?api_key=${API_KEY}&q=${encodeURIComponent(q)}&limit=10&rating=g`;
 
   try {
-    const response = await fetch(
-      `https://api.giphy.com/v1/stickers/search?api_key=${API_KEY}&q=${encodeURIComponent(q)}&limit=10&rating=g`
-    );
-    const data = await response.json();
+    let results = await fetchStickersOrGifs(`${base}/stickers/search${params}`);
 
-    if (!data.data || !Array.isArray(data.data)) {
-      return res.status(500).json({ error: "Respuesta inesperada", raw: data });
+    // Si no hay resultados de stickers, prueba con GIFs
+    if (results.length === 0) {
+      results = await fetchStickersOrGifs(`${base}/gifs/search${params}`);
     }
 
-    const stickers = data.data.map((item) => ({
+    const formatted = results.map((item) => ({
       id: item.id,
       title: item.title,
       type: "gif",
@@ -22,8 +28,8 @@ export default async function handler(req, res) {
       source: "Giphy"
     }));
 
-    res.status(200).json({ count: stickers.length, results: stickers });
+    res.status(200).json({ count: formatted.length, results: formatted });
   } catch (error) {
-    res.status(500).json({ error: "Error al buscar los stickers", details: error.message });
+    res.status(500).json({ error: "Error al buscar stickers o GIFs", details: error.message });
   }
 }
