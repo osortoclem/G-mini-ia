@@ -1,40 +1,34 @@
 export default async function handler(req, res) {
   const { q } = req.query;
-
-  if (!q) {
-    return res.status(400).json({ error: "Falta el parámetro ?q=tu_busqueda" });
-  }
-
-  const TENOR_OLD_API_KEY = "LIVDSRZULELA"; // Esta sí sirve en el endpoint anterior
+  if (!q) return res.status(400).json({ error: "Falta el parámetro ?q=busqueda" });
 
   try {
-    const response = await fetch(
-      `https://g.tenor.com/v1/search?q=${encodeURIComponent(q)}&key=${TENOR_OLD_API_KEY}&limit=10`
-    );
-
+    const response = await fetch(`https://api.sticker.ly/v2/packs/search?query=${encodeURIComponent(q)}&language=es`);
     const data = await response.json();
 
-    if (!data.results || !Array.isArray(data.results)) {
-      return res.status(500).json({
-        error: "Respuesta inesperada de Tenor (v1)",
-        response: data
-      });
+    if (!data.data || !Array.isArray(data.data)) {
+      return res.status(500).json({ error: "Respuesta inesperada", raw: data });
     }
 
-    const stickers = data.results.map((item) => {
-      const media = item.media?.[0] || {};
+    const packs = await Promise.all(
+      data.data.slice(0, 5).map(async (pack) => {
+        const packRes = await fetch(`https://api.sticker.ly/v2/packs/${pack.pack_id}`);
+        const packData = await packRes.json();
 
-      return {
-        id: item.id,
-        title: item.title || "Sticker",
-        type: media.mp4 ? "video" : media.gif ? "gif" : "image",
-        url: media.mp4?.url || media.gif?.url || media.tinygif?.url,
-        source: "Tenor"
-      };
-    });
+        return {
+          pack_id: pack.pack_id,
+          title: pack.title,
+          author: packData.author?.username || "Desconocido",
+          stickers: packData.stickers?.map((sticker) => ({
+            id: sticker.id,
+            url: sticker.image_url
+          })) || []
+        };
+      })
+    );
 
-    res.status(200).json({ count: stickers.length, results: stickers });
+    res.status(200).json({ count: packs.length, results: packs });
   } catch (error) {
-    res.status(500).json({ error: "Error al buscar los stickers", details: error.message });
+    res.status(500).json({ error: "Error al obtener datos de Sticker.ly", details: error.message });
   }
 }
