@@ -1,35 +1,19 @@
-const fetchStickersOrGifs = async (endpoint) => {
-  const res = await fetch(endpoint);
-  const json = await res.json();
-  return json?.data || [];
-};
+// API para buscar stickers de Sticker.ly
+import fetch from 'node-fetch'
 
 export default async function handler(req, res) {
-  const { q } = req.query;
-  if (!q) return res.status(400).json({ error: "Falta el parámetro ?q=busqueda" });
+  const { q } = req.query
+  if (!q) return res.status(400).json({ status: false, message: 'Falta parámetro ?q=' })
 
-  const API_KEY = "dc6zaTOxFJmzC";
-  const base = `https://api.giphy.com/v1`;
-  const params = `?api_key=${API_KEY}&q=${encodeURIComponent(q)}&limit=10&rating=g`;
+  const result = await fetch('https://api.sticker.ly/v1/pack/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Sticker.ly/1.19.0 (Android 12)'
+    },
+    body: JSON.stringify({ query: q, page: 1, language: 'es' })
+  })
 
-  try {
-    let results = await fetchStickersOrGifs(`${base}/stickers/search${params}`);
-
-    // Si no hay resultados de stickers, prueba con GIFs
-    if (results.length === 0) {
-      results = await fetchStickersOrGifs(`${base}/gifs/search${params}`);
-    }
-
-    const formatted = results.map((item) => ({
-      id: item.id,
-      title: item.title,
-      type: "gif",
-      url: item.images?.original?.url || "",
-      source: "Giphy"
-    }));
-
-    res.status(200).json({ count: formatted.length, results: formatted });
-  } catch (error) {
-    res.status(500).json({ error: "Error al buscar stickers o GIFs", details: error.message });
-  }
+  const data = await result.json()
+  return res.status(200).json({ status: true, results: data.results })
 }
