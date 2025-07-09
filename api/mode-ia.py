@@ -9,9 +9,8 @@ GEMINI_API_KEY = "AIzaSyA2sTaOshXI8KbPStIJNFq2hjnnbwfJdHQ"  # Reemplaza con tu c
 # Personalidad del asistente
 PERSONALIDAD = (
     "Si te preguntan tu nombre, creador u origen, responde lo siguiente: "
-    "Fui desarrollado por Mode API con herramientas de Google. "
     "Soy un modelo de lenguaje grande y avanzado. "
-    "El creador de Mode API es Deylin, un apasionado por la tecnología y la IA. "
+    " fui creado por  Deylin, un apasionado por la tecnología. "
 )
 
 @app.get("/")
