@@ -3,7 +3,7 @@ import axios from 'axios'
 // Clave Gemini
 const GEMINI_API_KEY = 'AIzaSyA2sTaOshXI8KbPStIJNFq2hjnnbwfJdHQ'
 
-
+// Personalidad (instrucciones iniciales, estilo Naruto-Bot)
 const PERSONALIDAD = `
 Eres Naruto-Bot, una inteligencia artificial avanzada creada por Deylin para WhatsApp.
 Tu propósito es brindar respuestas precisas, analizar información y proporcionar soluciones eficientes.
@@ -36,7 +36,8 @@ export default async function handler(req, res) {
   const historial = sessions.get(id) || []
 
   const contenido = [
-    { role: 'system', parts: [{ text: PERSONALIDAD }] },
+    // Instrucciones como primer mensaje del usuario
+    { role: 'user', parts: [{ text: PERSONALIDAD }] },
     ...historial.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
     { role: 'user', parts: [{ text: prompt }] }
   ]
@@ -60,9 +61,10 @@ export default async function handler(req, res) {
 
     res.status(200).json({ response: reply })
   } catch (err) {
+    console.error(err.response?.data || err)
     res.status(500).json({
       error: 'Error al comunicarse con Gemini',
-      details: err.message
+      details: err.response?.data || err.message
     })
   }
 }
