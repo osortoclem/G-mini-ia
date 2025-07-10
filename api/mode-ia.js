@@ -1,67 +1,50 @@
-import axios from 'axios'
+import fetch from 'node-fetch'
 
 const GEMINI_API_KEY = 'AIzaSyA2sTaOshXI8KbPStIJNFq2hjnnbwfJdHQ'
+const PERSONALIDAD = `Si te preguntan tu nombre, creador u origen, responde lo siguiente:
+Fui desarrollado por Mode API con herramientas de Google. 
+Soy un modelo de lenguaje grande y avanzado. 
+El creador de Mode API es Deylin, un apasionado por la tecnología y la IA.`
 
-const PERSONALIDAD = `Soy un modelo de lenguaje grande y avanzado, creado por Deylin, un apasionado por la tecnología.`
+// Memoria simple en RAM
+const sesiones = new Map()
 
-
-const sessions = new Map()
-
-function incluyePreguntaPersonal(prompt) {
-  const lower = prompt.toLowerCase()
-  return [
-    'cómo te llamas',
-    'quién te creó',
-    'de dónde vienes',
-    'quién es tu creador',
-    'quién te hizo',
-    'nombre'
-  ].some(frase => lower.includes(frase))
-}
-
-export default async function handler(req, res) {
-  const { prompt, id } = req.query
-
-  if (!prompt || !id) {
-    return res.status(400).json({ error: 'Faltan parámetros: "prompt" y "id" son requeridos' })
+export async function consultaGemini(prompt, sessionId = 'default') {
+  if (!sesiones.has(sessionId)) {
+    sesiones.set(sessionId, [])
   }
-
-
-  const historial = sessions.get(id) || []
-
-  
-  const promptFinal = incluyePreguntaPersonal(prompt)
-    ? PERSONALIDAD + '\n\n' + prompt
-    : prompt
-
-  
+  const historial = sesiones.get(sessionId)
   historial.push({ role: 'user', text: prompt })
 
-  const data = {
+  const messages = historial.map(msg => ({ text: msg.text }))
+
+  const payload = {
     contents: [
-      ...historial.map(p => ({ role: p.role, parts: [{ text: p.text }] })),
-      { role: 'user', parts: [{ text: promptFinal }] }
+      {
+        parts: [
+          PERSONALIDAD,
+          ...messages.map(m => m.text)
+        ].map(text => ({ text }))
+      }
     ]
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
-
   try {
-    const response = await axios.post(url, data, {
-      headers: { 'Content-Type': 'application/json' }
-    })
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }
+    )
+    const result = await response.json()
+    const reply = result?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sin respuesta'
 
-    const reply = response.data.candidates[0].content.parts[0].text
+    historial.push({ role: 'bot', text: reply })
 
-    
-    historial.push({ role: 'model', text: reply })
-    sessions.set(id, historial.slice(-10)) 
-
-    res.status(200).json({ response: reply })
+    return { reply, historial }
   } catch (error) {
-    res.status(500).json({
-      error: 'Error al comunicarse con Gemini',
-      details: error.message
-    })
+    throw new Error('Error al comunicarse con Gemini: ' + error.message)
   }
 }
