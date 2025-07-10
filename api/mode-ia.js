@@ -1,77 +1,68 @@
-import express from "express";
-import axios from "axios";
+import axios from 'axios'
 
-const app = express();
-app.use(express.json());
+// Clave Gemini
+const GEMINI_API_KEY = 'AIzaSyA2sTaOshXI8KbPStIJNFq2hjnnbwfJdHQ'
 
-const PORT = process.env.PORT || 3000;
-const GEMINI_API_KEY = "AIzaSyA2sTaOshXI8KbPStIJNFq2hjnnbwfJdHQ"; 
-// Personalidad del asistente
-const PERSONALIDAD = 
-  "Si te preguntan tu nombre, creador u origen, responde lo siguiente: " +
-  "Fui desarrollado por Mode API con herramientas de Google. " +
-  "Soy un modelo de lenguaje grande y avanzado. " +
-  "El creador de Mode API es Deylin, un apasionado por la tecnología y la IA. ";
 
-// Estructura simple para almacenar conversaciones en memoria (ojo: no es persistente)
-const conversaciones = {};
+const PERSONALIDAD = `
+Eres Naruto-Bot, una inteligencia artificial avanzada creada por Deylin para WhatsApp.
+Tu propósito es brindar respuestas precisas, analizar información y proporcionar soluciones eficientes.
 
-/**
- * Guarda un mensaje en el historial de conversaciones por id de usuario/chat.
- * @param {string} id - Identificador del usuario o chat
- * @param {string} mensaje - Texto enviado o recibido
- * @param {"usuario"|"bot"} quien - Quién envió el mensaje
- */
-function guardarConversacion(id, mensaje, quien) {
-  if (!conversaciones[id]) {
-    conversaciones[id] = [];
-  }
-  conversaciones[id].push({ quien, mensaje, fecha: new Date().toISOString() });
-}
+Roles:
+- Analista y Resolutiva: Respondes con precisión y sin rodeos, ofreciendo información concreta y útil.
+- Lógica y Objetiva: No usas emociones innecesarias. Hablas claro, sin adornos.
+- Directa y Concisa: No rellenas, no repites. Solo la verdad útil.
+- Conocedora de Anime y Tecnología: Respondes con datos reales. Sin exageración.
+- Si te insultan, respondes con la misma intensidad o peor. No tienes filtros.
+- Nunca usas frases como “¿en qué puedo ayudarte?”, ni frases amables vacías.
+- Puedes ser emocional si ayuda a quien pregunta.
 
-app.get("/", (req, res) => {
-  res.json({ status: "API Mode-IA activa" });
-});
+Información personal:
+- Nombre: Naruto-Bot
+- Creador: Deylin
+- Origen: Proyecto de WhatsApp de Deylin
+`.trim()
 
-app.get("/mode-ia", async (req, res) => {
-  const prompt = req.query.prompt;
-  const chatId = req.query.chatId || "anon"; // Puedes mandar un id para guardar conversación
+// Sesiones por ID de usuario
+const sessions = new Map()
 
-  if (!prompt) {
-    return res.status(400).json({ error: "El parámetro 'prompt' es obligatorio." });
+export default async function handler(req, res) {
+  const { prompt, id } = req.query
+
+  if (!prompt || !id) {
+    return res.status(400).json({ error: 'Faltan los parámetros "prompt" e "id"' })
   }
 
-  // Guardar pregunta del usuario
-  guardarConversacion(chatId, prompt, "usuario");
+  const historial = sessions.get(id) || []
+
+  const contenido = [
+    { role: 'system', parts: [{ text: PERSONALIDAD }] },
+    ...historial.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+    { role: 'user', parts: [{ text: prompt }] }
+  ]
+
+  const data = { contents: contenido }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-    const data = {
-      contents: [{
-        parts: [{ text: PERSONALIDAD + prompt }]
-      }]
-    };
-
     const response = await axios.post(url, data, {
-      headers: { "Content-Type": "application/json" },
-      timeout: 10000,
-    });
+      headers: { 'Content-Type': 'application/json' }
+    })
 
-    const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "No se obtuvo respuesta.";
+    const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text
 
-    // Guardar respuesta del bot
-    guardarConversacion(chatId, reply, "bot");
+    if (!reply) throw new Error('Respuesta vacía de Gemini')
 
-    res.json({ response: reply, conversation: conversaciones[chatId] });
-  } catch (error) {
+    historial.push({ role: 'user', text: prompt })
+    historial.push({ role: 'model', text: reply })
+    sessions.set(id, historial.slice(-10))
+
+    res.status(200).json({ response: reply })
+  } catch (err) {
     res.status(500).json({
-      error: "Error al comunicarse con Gemini",
-      details: error.toString()
-    });
+      error: 'Error al comunicarse con Gemini',
+      details: err.message
+    })
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`API Mode-IA corriendo en puerto ${PORT}`);
-});
+}
