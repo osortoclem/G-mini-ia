@@ -12,23 +12,24 @@ export default async function handler(req, res) {
         'User-Agent': 'Mozilla/5.0',
       }
     })
-    const $ = cheerio.load(data)
 
+    const $ = cheerio.load(data)
     const results = []
-    $('.jeg_post').each((i, el) => {
+
+    $('article.jeg_post').each((i, el) => {
       if (results.length >= 10) return
 
-      const name = $(el).find('.jeg_post_title a').text().trim()
-      const link = $(el).find('.jeg_post_title a').attr('href')
-      const description = $(el).find('.jeg_post_excerpt p').text().trim()
+      const name = $(el).find('.jeg_post_title > a').text().trim()
+      const postUrl = $(el).find('.jeg_post_title > a').attr('href')
 
-      if (name && link) {
-        results.push({ name, description, link })
-      }
+      if (!postUrl) return
+
+      results.push({ name, description: '', link: postUrl })
     })
 
     res.status(200).json(results)
   } catch (e) {
-    res.status(500).json({ error: 'Ocurrió un error al obtener los datos.' })
+    console.error('Error al hacer scraping:', e)
+    res.status(500).json({ error: 'Error interno al procesar la solicitud.' })
   }
 }
