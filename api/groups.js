@@ -1,5 +1,6 @@
-import fetch from 'node-fetch'
 import cheerio from 'cheerio'
+import https from 'https'
+import iconv from 'iconv-lite'
 
 export default async function handler(req, res) {
   const tema = req.query.q
@@ -8,10 +9,7 @@ export default async function handler(req, res) {
   const url = `https://www.gruposwats.com/${encodeURIComponent(tema)}.html`
 
   try {
-    const response = await fetch(url)
-    if (!response.ok) throw new Error('No se pudo acceder a la página')
-
-    const html = await response.text()
+    const html = await fetchLatin1(url)
     const $ = cheerio.load(html)
 
     const grupos = []
@@ -38,4 +36,19 @@ export default async function handler(req, res) {
   } catch (err) {
     res.status(500).json({ error: 'Error al obtener los grupos', detalles: err.message })
   }
+}
+
+// Función para leer páginas con encoding windows-1252
+async function fetchLatin1(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (response) => {
+      let chunks = []
+      response.on('data', (chunk) => chunks.push(chunk))
+      response.on('end', () => {
+        const buffer = Buffer.concat(chunks)
+        const decoded = iconv.decode(buffer, 'windows-1252')
+        resolve(decoded)
+      })
+    }).on('error', reject)
+  })
 }
