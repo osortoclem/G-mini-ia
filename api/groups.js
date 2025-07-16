@@ -16,11 +16,11 @@ export default async function handler(req, res) {
 
     const grupos = []
 
-    $('.divgrupowhatsapp').each((i, el) => {
-      const nombre = $(el).find('.titulo-grupo').text().trim()
-      const descripcion = $(el).find('.descripcion-grupo').text().trim()
-      const categoria = $(el).find('.categoria-grupo').text().trim()
-      const img = $(el).find('img').attr('src')
+    $('.divgrupowhatsapp').each((_, el) => {
+      const nombre = $(el).find('.grupo_nombre').text().trim()
+      const descripcion = $(el).find('.grupo_descripcion').text().trim()
+      const categoria = $(el).find('.grupo_categoria').text().trim()
+      const img = $(el).find('img.img_grupowasap').attr('src')
       const link = $(el).find('a').attr('href')
 
       if (nombre && link) {
